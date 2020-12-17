@@ -1,6 +1,6 @@
 <div class="title-block" style="text-align: center;" align="center">
 
-# Lysbeth
+# Lisbeth
 
 A parsing infrastructure for the rust programming language\*.<br>
 <sub>\*Some assembly required.</sub>
