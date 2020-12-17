@@ -80,8 +80,13 @@ pub struct Span {
 /// This is represented the same way as [`Span`], but with an additionnal
 /// content field.
 ///
-/// It is initially created with the [`input_file`][SpannedStr::input_file]
-/// function, and *will* then be splitted at desired index.
+/// It is initially created with the [`input_file`] function, and *will* then
+/// be splitted at desired index. Its content and span can be accessed with the
+/// [`content`] and [`span`] methods.
+///
+/// [`input_file`]: SpannedStr::input_file
+/// [`content`]: SpannedStr::content
+/// [`span`]: SpannedStr::span
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SpannedStr<'a> {
     span: Span,
@@ -111,6 +116,41 @@ impl<'a> SpannedStr<'a> {
             span: Span { start, end },
             content,
         }
+    }
+
+    /// Returns the contained [`Span`].
+    ///
+    /// The span contains the position at which the content is located in the
+    /// input data.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lisbeth_error::span::SpannedStr;
+    ///
+    /// let a = SpannedStr::input_file("foo bar");
+    /// let b = SpannedStr::input_file("baz qux");
+    ///
+    /// // a and b have the same length and the same starting point, so they
+    /// // have the same span.
+    /// assert_eq!(a.span(), b.span());
+    /// ```
+    pub fn span(self) -> Span {
+        self.span
+    }
+
+    /// Returns the span content.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lisbeth_error::span:: SpannedStr;
+    ///
+    /// let a = SpannedStr::input_file("hello");
+    /// assert_eq!(a.content(), "hello");
+    /// ```
+    pub fn content(self) -> &'a str {
+        self.content
     }
 }
 
@@ -201,6 +241,29 @@ mod tests {
             assert_eq!(sstr.span.start, Position::BEGINNING);
             assert_eq!(sstr.span.end.line, 1);
             assert_eq!(sstr.span.end.col, 5);
+        }
+
+        #[test]
+        fn span_and_content() {
+            let span = Span {
+                start: Position {
+                    line: 10,
+                    col: 0,
+                    offset: 100,
+                },
+                end: Position {
+                    line: 15,
+                    col: 10,
+                    offset: 150,
+                },
+            };
+
+            let content = "hello, world";
+
+            let sstr = SpannedStr { content, span };
+
+            assert_eq!(sstr.span(), span);
+            assert_eq!(sstr.content(), content);
         }
     }
 }
