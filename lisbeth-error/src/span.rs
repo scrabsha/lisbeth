@@ -157,6 +157,16 @@ impl Span {
     pub const fn end(self) -> Position {
         self.end
     }
+
+    #[inline]
+    fn split_with(self, mid: Position) -> (Span, Span) {
+        let Span { start, end } = self;
+
+        let left = Span { start, end: mid };
+        let right = Span { start: mid, end };
+
+        (left, right)
+    }
 }
 
 /// Represents a portion of input file.
@@ -164,9 +174,36 @@ impl Span {
 /// This is represented the same way as [`Span`], but with an additionnal
 /// content field.
 ///
-/// It is initially created with the [`input_file`] function, and *will* then
-/// be splitted at desired index. Its content and span can be accessed with the
+/// It is initially created with the [`input_file`] function, and can then be
+/// splitted at desired index. Its content and span can be accessed with the
 /// [`content`] and [`span`] methods.
+///
+/// # Example
+///
+/// The following code shows how to extract a sequence of numbers separated by
+/// non-digit characters.
+///
+/// ```rust
+/// use lisbeth_error::span::{Span, SpannedStr};
+///
+/// #[derive(Debug)]
+/// struct Number(u32, Span);
+///
+/// // Parses a number from input, if any failure occurs, returns None
+/// fn extract_number<'a>(input: SpannedStr<'a>) -> (Number, SpannedStr<'a>) {
+///     let (matched, tail) = input.take_while(char::is_numeric);
+///
+///     let value = matched.content().parse().unwrap();
+///     let number = Number(value, matched.span());
+///     (number, tail)
+/// }
+///
+/// let input = SpannedStr::input_file("42 or nothing");
+/// let (number, tail) = extract_number(input);
+///
+/// assert_eq!(number.0, 42);
+/// assert_eq!(tail.content(), " or nothing");
+/// ```
 ///
 /// [`input_file`]: SpannedStr::input_file
 /// [`content`]: SpannedStr::content
@@ -235,6 +272,73 @@ impl<'a> SpannedStr<'a> {
     /// ```
     pub fn content(self) -> &'a str {
         self.content
+    }
+
+    /// Splits the spanned string at a given byte index.
+    ///
+    /// This method works the same way as [str::split_at], but updates the span
+    /// so that it is still correct.
+    ///
+    /// # Panics
+    ///
+    /// This method panics when one of the condition listed in [`str::split_at`]
+    /// is met.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lisbeth_error::span::SpannedStr;
+    ///
+    /// let input = SpannedStr::input_file("helloworld");
+    /// let (left, right) = input.split_at(5);
+    ///
+    /// assert_eq!(left.content(), "hello");
+    /// assert_eq!(right.content(), "world");
+    /// ```
+    pub fn split_at(self, idx: usize) -> (SpannedStr<'a>, SpannedStr<'a>) {
+        let (left_content, right_content) = self.content.split_at(idx);
+
+        let mid = self.span.start.advance_with(left_content);
+        let (left_span, right_span) = self.span.split_with(mid);
+
+        let left_sstr = SpannedStr {
+            span: left_span,
+            content: left_content,
+        };
+
+        let right_sstr = SpannedStr {
+            span: right_span,
+            content: right_content,
+        };
+
+        (left_sstr, right_sstr)
+    }
+
+    /// Returns the longest prefix of input that match a given a condition.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use lisbeth_error::span::SpannedStr;
+    ///
+    /// let i = SpannedStr::input_file("42 101");
+    /// let (number, tail) = i.take_while(char::is_numeric);
+    ///
+    /// assert_eq!(number.content(), "42");
+    /// assert_eq!(tail.content(), " 101");
+    /// ```
+    pub fn take_while<F>(self, mut f: F) -> (SpannedStr<'a>, SpannedStr<'a>)
+    where
+        F: FnMut(char) -> bool,
+    {
+        let idx = self
+            .content
+            .char_indices()
+            .find(|(_, chr)| !f(*chr))
+            .map(|(idx, _)| idx)
+            .unwrap_or_else(|| self.content.len());
+
+        self.split_at(idx)
     }
 }
 
@@ -348,6 +452,85 @@ mod tests {
 
             assert_eq!(sstr.span(), span);
             assert_eq!(sstr.content(), content);
+        }
+
+        #[test]
+        fn split_at_working() {
+            let input = SpannedStr::input_file("foobar");
+            let (left, right) = input.split_at(3);
+
+            assert_eq!(left.content, "foo");
+            assert_eq!(right.content, "bar");
+
+            let left_span = Span {
+                start: Position {
+                    line: 0,
+                    col: 0,
+                    offset: 0,
+                },
+                end: Position {
+                    line: 0,
+                    col: 3,
+                    offset: 3,
+                },
+            };
+
+            let right_span = Span {
+                start: Position {
+                    line: 0,
+                    col: 3,
+                    offset: 3,
+                },
+                end: Position {
+                    line: 0,
+                    col: 6,
+                    offset: 6,
+                },
+            };
+
+            assert_eq!(left.span, left_span);
+            assert_eq!(right.span, right_span);
+        }
+
+        #[test]
+        #[should_panic(expected = "byte index 15 is out of bounds of `hello, world`")]
+        fn split_at_out_of_bounds() {
+            let f = SpannedStr::input_file("hello, world");
+            f.split_at(15);
+        }
+
+        #[test]
+        #[should_panic(
+            expected = "byte index 2 is not a char boundary; it is inside \'é\' (bytes 1..3) of `Vélo`"
+        )]
+        fn split_at_non_boundary() {
+            let f = SpannedStr::input_file("Vélo");
+            f.split_at(2);
+        }
+
+        #[test]
+        fn take_while() {
+            let (left, right) = SpannedStr::input_file("foo bar").take_while(|c| c != ' ');
+
+            assert_eq!(left.content, "foo");
+            assert_eq!(right.content, " bar");
+        }
+
+        #[test]
+        fn take_while_empty_string() {
+            let input = SpannedStr::input_file("");
+            let (left, right) = input.take_while(|_| true);
+
+            assert_eq!(left, input);
+            assert_eq!(right, input);
+        }
+
+        #[test]
+        fn take_while_non_ascii() {
+            let (left, right) = SpannedStr::input_file("éêè").take_while(|c| c != 'è');
+
+            assert_eq!(left.content, "éê");
+            assert_eq!(right.content, "è");
         }
     }
 }
