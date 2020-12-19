@@ -11,4 +11,5 @@
 
 #![forbid(missing_docs, warnings)]
 
+pub mod error;
 pub mod span;
