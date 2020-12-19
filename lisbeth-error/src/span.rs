@@ -159,7 +159,7 @@ impl Span {
     }
 
     #[inline]
-    fn split_with(self, mid: Position) -> (Span, Span) {
+    const fn split_with(self, mid: Position) -> (Span, Span) {
         let Span { start, end } = self;
 
         let left = Span { start, end: mid };
@@ -256,7 +256,7 @@ impl<'a> SpannedStr<'a> {
     /// // have the same span.
     /// assert_eq!(a.span(), b.span());
     /// ```
-    pub fn span(self) -> Span {
+    pub const fn span(self) -> Span {
         self.span
     }
 
@@ -270,7 +270,7 @@ impl<'a> SpannedStr<'a> {
     /// let a = SpannedStr::input_file("hello");
     /// assert_eq!(a.content(), "hello");
     /// ```
-    pub fn content(self) -> &'a str {
+    pub const fn content(self) -> &'a str {
         self.content
     }
 
