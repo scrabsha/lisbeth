@@ -2,7 +2,7 @@
 
 # Lisbeth
 
-A parsing infrastructure for the rust programming language\*.<br>
+A parsing framework written in rust\*.<br>
 <sub>\*Some assembly required.</sub>
 
 </div>
