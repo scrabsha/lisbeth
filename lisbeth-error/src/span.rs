@@ -16,8 +16,12 @@
 
 use std::cmp::{Ord, Ordering};
 
+/// Represents a position in the input data.
+///
+/// Positions are 0-indexed, meaning that the first character of each line has
+/// 0 as column number. The same goes for the line number.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-struct Position {
+pub struct Position {
     line: u32,
     col: u32,
     offset: u32,
@@ -50,16 +54,73 @@ impl Position {
 
         Position { line, col, offset }
     }
+
+    /// Returns the position's line.
+    #[inline]
+    pub const fn line(self) -> u32 {
+        self.line
+    }
+
+    /// Returns the position's column.
+    #[inline]
+    pub const fn col(self) -> u32 {
+        self.col
+    }
+
+    /// Returns the position's offset from the beginning of the file.
+    #[inline]
+    pub const fn offset(self) -> u32 {
+        self.offset
+    }
 }
 
+// Note: when the following documentation is modified, remember to update the
+// doc for Position::Ord accordingly.
+/// # Warning
+///
+/// Positions can be compared toghether only if they come from the same input
+/// unit. If they do not, then inconsistencies may occur.
+///
+/// # Panics
+///
+/// In debug mode, this function may panic if the two positions are not from the
+/// same input unit. In release mode, this function does not panic.
 impl PartialOrd for Position {
     fn partial_cmp(&self, other: &Position) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+// Note: when the following documentation is modified, remember to update the
+// doc for Position::PartialOrd accordingly.
+/// # Warning
+///
+/// Positions can be compared toghether only if they come from the same input
+/// unit. If they do not, then inconsistencies may occur.
+///
+/// # Panics
+///
+/// In debug mode, this function may panic if the two positions are not from the
+/// same input unit. In release mode, this function does not panic.
 impl Ord for Position {
-    // This compares the position according to the offset_from_beginning field.
+    #[cfg(debug)]
+    fn cmp(&self, other: &Position) -> Ordering {
+        let offset_provided = self.offset.cmp(&other.offset);
+
+        let lc_provided = match self.line.cmp(&other.line) {
+            Ordering::Equal => self.col.cmp(&other.col),
+            any => any,
+        };
+
+        assert!(
+            offset_provided != lc_provided,
+            "Attempt to perform an inconsistent span comparaison",
+        );
+
+        offset_provided
+    }
+
+    #[cfg(not(debug))]
     fn cmp(&self, other: &Position) -> Ordering {
         self.offset.cmp(&other.offset)
     }
@@ -73,6 +134,29 @@ impl Ord for Position {
 pub struct Span {
     start: Position,
     end: Position,
+}
+
+impl Span {
+    /// Returns the span's starting position.
+    #[inline]
+    pub const fn start(self) -> Position {
+        self.start
+    }
+
+    /// Returns the span's ending position.
+    ///
+    /// The position ends on the next non-spanned part:
+    ///
+    /// ```rust
+    /// use lisbeth_error::span::SpannedStr;
+    ///
+    /// let s = SpannedStr::input_file("hello");
+    /// assert_eq!(s.span().end().col(), 5);
+    /// ```
+    #[inline]
+    pub const fn end(self) -> Position {
+        self.end
+    }
 }
 
 /// Represents a portion of input file.
