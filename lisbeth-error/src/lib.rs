@@ -9,5 +9,6 @@
 //! Spans are conveyed thanks to the `SpannedStr` type, which holds the a string
 //! slice and its position in the input stream.
 
-#[forbid(missing_docs)]
+#![forbid(missing_docs, warnings)]
+
 pub mod span;
