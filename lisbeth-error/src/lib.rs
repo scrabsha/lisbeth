@@ -12,4 +12,5 @@
 #![forbid(missing_docs, warnings)]
 
 pub mod error;
+pub mod reporter;
 pub mod span;

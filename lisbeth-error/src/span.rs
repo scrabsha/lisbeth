@@ -167,6 +167,13 @@ impl Span {
 
         (left, right)
     }
+
+    pub(crate) fn of_file(input: &str) -> Span {
+        let start = Position::BEGINNING;
+        let end = start.advance_with(input);
+
+        Span { start, end }
+    }
 }
 
 /// Represents a portion of input file.
@@ -230,13 +237,30 @@ impl<'a> SpannedStr<'a> {
     /// let whole_file = SpannedStr::input_file(file_content);
     /// ```
     pub fn input_file(content: &'a str) -> SpannedStr<'a> {
-        let start = Position::BEGINNING;
-        let end = start.advance_with(content);
+        let span = Span::of_file(content);
 
-        SpannedStr {
-            span: Span { start, end },
-            content,
-        }
+        SpannedStr { span, content }
+    }
+
+    // Note: span must represent the same source as content, otherwise
+    // inconsistent results may occur.
+    //
+    // In debug mode, it is ensured that:
+    //   - span.start == Position::BEGINNING,
+    //   - span.end.offset == content.len().
+    pub(crate) fn assemble(content: &'a str, span: Span) -> SpannedStr<'a> {
+        debug_assert_eq!(
+            span.start,
+            Position::BEGINNING,
+            "Attempt to create a SpannedStr that does not start at the beginning of the file",
+        );
+        debug_assert_eq!(
+            span.end.offset as usize,
+            content.len(),
+            "Attempt to create a SpannedStr with an incorrect length",
+        );
+
+        SpannedStr { content, span }
     }
 
     /// Returns the contained [`Span`].
@@ -416,6 +440,22 @@ mod tests {
             };
 
             assert!(p > q);
+        }
+    }
+
+    mod span {
+        use super::*;
+
+        #[test]
+        fn of_file() {
+            let i = "hello, world";
+            let left = Span::of_file("hello, world");
+
+            let start = Position::BEGINNING;
+            let end = start.advance_with(i);
+            let right = Span { start, end };
+
+            assert_eq!(left, right);
         }
     }
 
