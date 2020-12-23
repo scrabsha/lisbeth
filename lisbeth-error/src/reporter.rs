@@ -4,16 +4,9 @@
 //! about the input. This structure provides the metadata that are needed to
 //! properly report the error to the user.
 
-use std::{
-    fmt::{self, Display},
-    fs,
-    io::Error as IOError,
-};
+use std::{fs, io::Error as IOError};
 
-use crate::{
-    error::AnnotatedError,
-    span::{Position, Span, SpannedStr},
-};
+use crate::span::{Position, Span, SpannedStr};
 
 /// Holds metadata about the input, allows to report errors to the user.
 ///
@@ -89,6 +82,31 @@ impl ErrorReporter {
         // self.span has been built from self.content, so this call is fine.
         SpannedStr::assemble(self.content.as_str(), self.span)
     }
+
+    #[allow(dead_code)]
+    fn code_snippet_for(&self, start_pos: Position, end_pos: Position) -> &str {
+        let (start_offset, end_offset) = (start_pos.offset() as usize, end_pos.offset() as usize);
+
+        let before_start = self.content.split_at(start_offset).0;
+        let after_end = self.content.split_at(end_offset).1;
+
+        let end_idx = end_offset as usize
+            + after_end
+                .char_indices()
+                .find(|(_, c)| *c == '\n')
+                .map(|(idx, _)| idx)
+                .unwrap_or_else(|| after_end.len());
+
+        let start_idx = before_start
+            .char_indices()
+            .rev()
+            .take_while(|(_, c)| *c != '\n')
+            .last()
+            .map(|(idx, _)| idx)
+            .unwrap_or_else(|| before_start.len());
+
+        self.content.split_at(end_idx).0.split_at(start_idx).1
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -96,4 +114,50 @@ pub(crate) struct Annotation<'a> {
     pub(crate) col_number: usize,
     pub(crate) length: usize,
     pub(crate) text: &'a str,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod error_reporter {
+        use super::*;
+
+        use crate::error::AnnotatedError;
+
+        #[test]
+        fn code_snippet_for_single_line() {
+            let foobar = "foo bar";
+            let input_file = ErrorReporter::non_file_input(foobar.to_string());
+
+            let foo = input_file.spanned_str().split_at(3).0;
+            let bar = input_file.spanned_str().split_at(4).1;
+
+            let report = AnnotatedError::new(foo.span(), "Common word found")
+                .with_annotation(foo.span(), "This happens to be a common word")
+                .with_annotation(bar.span(), "This too by the way");
+
+            let (start, end) = report.bounds();
+
+            let selected_text = input_file.code_snippet_for(start, end);
+
+            assert_eq!(selected_text, "foo bar");
+        }
+
+        #[test]
+        fn code_snippet_for_select_specific() {
+            let input_text = "foo bar\nbarbar\nbazbaz";
+            let input_file = ErrorReporter::non_file_input(input_text.to_string());
+
+            let barbar = input_file.spanned_str().split_at(8).1.split_at(6).0;
+            assert_eq!(barbar.content(), "barbar");
+            let report = AnnotatedError::new(barbar.span(), "Found a non-existant word");
+
+            let (start, end) = report.bounds();
+
+            let selected_text = input_file.code_snippet_for(start, end);
+
+            assert_eq!(selected_text, "barbar");
+        }
+    }
 }
