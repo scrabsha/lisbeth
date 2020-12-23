@@ -4,20 +4,27 @@
 //! about the input. This structure provides the metadata that are needed to
 //! properly report the error to the user.
 
-use std::{fs, io::Error as IOError};
+use std::{
+    fmt::{self, Display},
+    fs,
+    io::Error as IOError,
+};
 
-use crate::span::{Span, SpannedStr};
+use crate::{
+    error::AnnotatedError,
+    span::{Position, Span, SpannedStr},
+};
 
 /// Holds metadata about the input, allows to report errors to the user.
 ///
 /// This structure should be created before the parsing process and will provide
-/// metadata required for the [`AnnotatedReport`].
+/// metadata required for the [`AnnotatedError`].
 ///
 /// If the reporter contains a file path, then this path must be valid UTF-8.
 /// This is needed because the file path is printed on the console when an error
 /// is reported.
 ///
-/// [`AnnotatedReport`]: [super::error::AnnotatedError]
+/// [`AnnotatedError`]: [super::error::AnnotatedError]
 pub struct ErrorReporter {
     path: Option<String>,
     content: String,
@@ -82,4 +89,11 @@ impl ErrorReporter {
         // self.span has been built from self.content, so this call is fine.
         SpannedStr::assemble(self.content.as_str(), self.span)
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Annotation<'a> {
+    pub(crate) col_number: usize,
+    pub(crate) length: usize,
+    pub(crate) text: &'a str,
 }
