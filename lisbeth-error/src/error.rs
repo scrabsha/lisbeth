@@ -75,7 +75,6 @@ impl AnnotatedError {
         self.span
     }
 
-    #[allow(dead_code)]
     fn all_spans<'a>(&'a self) -> impl Iterator<Item = Span> + 'a {
         self.annotations
             .iter()
@@ -83,7 +82,6 @@ impl AnnotatedError {
             .chain(iter::once(self.span))
     }
 
-    #[allow(dead_code)]
     pub(crate) fn bounds(&self) -> (Position, Position) {
         // These two unwraps won't panic because all_spans returns an iterator
         // that contains at least the span at which the error happened.
@@ -93,7 +91,6 @@ impl AnnotatedError {
         (min, max)
     }
 
-    #[allow(dead_code)]
     pub(crate) fn error_matrix<'a>(&'a self) -> Vec<Vec<ReportedAnnotation<'a>>> {
         let (start_pos, end_pos) = self.bounds();
 
