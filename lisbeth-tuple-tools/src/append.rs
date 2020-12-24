@@ -1,21 +1,3 @@
-//! Allows to append values at the end of tuples.
-//!
-//! This module provides the `TupleAppend` trait, which allows to append an
-//! element at the end of a tuple.
-//!
-//! # Example
-//!
-//! Here, we append a [`char`] to a `(char, u32)`:
-//!
-//! ```rust
-//! use lisbeth_tuple_tools::TupleAppend;
-//!
-//! let left = ('l', 42).append('s');
-//! let right = ('l', 42, 's');
-//!
-//! assert_eq!(left, right);
-//! ```
-
 /// Allows to append an element at the end of a tuple.
 ///
 /// The generic type parameter `T` represents the type to be appended. It may
