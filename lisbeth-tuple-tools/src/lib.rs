@@ -25,7 +25,23 @@
 //! This crate contains [`TupleMap1`], [`TupleMap2`], and so on. These traits
 //! provide functions that allow to map a single element of a tuple from one
 //! type to an other.
+//!
+//! ## Example
+//!
+//! The following example uses [`TupleMap1`], but it can be adapted to
+//! any `TupleMap*` trait:
+//!
+//! ```rust
+//! use lisbeth_tuple_tools::TupleMap1;
+//!
+//! let t = ('a', 0, "foo");
+//! let t = t.map_1(char::len_utf8);
+//!
+//! assert_eq!(t, (1, 0, "foo"));
+//! ```
 
 mod append;
+mod map;
 
 pub use append::TupleAppend;
+pub use map::*;
