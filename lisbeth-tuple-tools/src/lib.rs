@@ -6,7 +6,7 @@
 //! # `TupleAppend`
 //!
 //! There is no simple way to append a value of type `C` to a tuple of type
-//! `(A, B)` in rust. This is permitted by `TupleAppend`.
+//! `(A, B)` in rust. This is permitted by [`TupleAppend`].
 
 mod append;
 
