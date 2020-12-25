@@ -2,15 +2,27 @@
 //!
 //! A dead-simple error type for the lisbeth parser infrastructure.
 //!
-//! This type allows provides the `ErrorReport` type, that allows to annotate
-//! input code in order to explain what happened to the user. Annotations are
-//! added to the report by providing a span and an associated message.
+//! The types in this crate *should* be used in that order:
+//!   - an [`ErrorReporter`] is created from input,
+//!   - a [`SpannedStr`] is created from the [`ErrorReporter`],
+//!   - parsing happens on that [`SpannedStr`],
+//!   - tokens are produced, they store their position with a [`Span`],
+//!   - when an error occurs, an error is reported with an [`AnnotatedError`],
+//!   - this error is formatted by the [`ErrorReporter`] declared previously,
+//!   which returns a [`FormattedError`],
+//!   - the [`FormattedError`] is printed on the console.
 //!
-//! Spans are conveyed thanks to the `SpannedStr` type, which holds the a string
-//! slice and its position in the input stream.
+//! An example of usage can be found in the [handbook] module.
+//!
+//! [`ErrorReporter`]: reporter::ErrorReporter
+//! [`SpannedStr`]: span::SpannedStr
+//! [`Span`]: span::Span
+//! [`AnnotatedError`]: error::AnnotatedError
+//! [`FormattedError`]: reporter::FormattedError
 
 #![forbid(missing_docs, warnings)]
 
 pub mod error;
+pub mod handbook;
 pub mod reporter;
 pub mod span;
