@@ -3,6 +3,12 @@ name = "lisbeth-tuple-tools"
 version = "0.1.0"
 authors = ["Sasha Pourcelot <sasha.pourcelot@protonmail.com>"]
 edition = "2018"
+description = "A set of tools for tuple manipulation"
+documentation = "https://docs.rs/lisbeth-tuple-tools"
+readme = "https://github.com/scrabsha/lisbeth/lisbeth-tuple-tools/README.md"
+repository = "https://github.com/scrabsha/lisbeth"
+license = "MIT"
+categories = ["rust-patterns"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
