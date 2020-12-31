@@ -1,0 +1,11 @@
+[package]
+name = "lisbeth-parser"
+version = "0.1.0"
+authors = ["Sasha Pourcelot <sasha.pourcelot@protonmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lisbeth-tuple-tools = { path = "../lisbeth-tuple-tools" }
+lisbeth-error = { path = "../lisbeth-error" }

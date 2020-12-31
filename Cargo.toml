@@ -3,4 +3,5 @@
 members = [
     "lisbeth-error",
     "lisbeth-tuple-tools",
+    "lisbeth-parser",
 ]
