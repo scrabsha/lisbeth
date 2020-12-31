@@ -75,7 +75,7 @@ impl AnnotatedError {
         self.span
     }
 
-    fn all_spans<'a>(&'a self) -> impl Iterator<Item = Span> + 'a {
+    fn all_spans(&self) -> impl Iterator<Item = Span> + '_ {
         self.annotations
             .iter()
             .map(|a| a.span)
@@ -91,7 +91,7 @@ impl AnnotatedError {
         (min, max)
     }
 
-    pub(crate) fn error_matrix<'a>(&'a self) -> Vec<Vec<ReportedAnnotation<'a>>> {
+    pub(crate) fn error_matrix(&self) -> Vec<Vec<ReportedAnnotation>> {
         let (start_pos, end_pos) = self.bounds();
 
         let (first_line_number, last_line_number) =
