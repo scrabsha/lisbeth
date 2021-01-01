@@ -174,6 +174,30 @@ impl Span {
 
         Span { start, end }
     }
+
+    /// Returns the span of the character following the current span, on the
+    /// same line.
+    ///
+    /// This function can be used when an unexpected EOF happens.
+    ///
+    /// ```rust
+    /// use lisbeth_error::span::{Span, SpannedStr};
+    ///
+    /// let input = SpannedStr::input_file("foo");
+    /// let after_input = input.span().next_char();
+    ///
+    /// assert_eq!(after_input.start().line(), 0);
+    /// assert_eq!(after_input.start().col(), 3);
+    ///
+    /// assert_eq!(after_input.end().line(), 0);
+    /// assert_eq!(after_input.end().col(), 4);
+    /// ```
+    pub fn next_char(self) -> Span {
+        let start = self.end;
+        let end = start.advance_with(" ");
+
+        Span { start, end }
+    }
 }
 
 /// Represents a portion of input file.
@@ -454,6 +478,39 @@ mod tests {
             let start = Position::BEGINNING;
             let end = start.advance_with(i);
             let right = Span { start, end };
+
+            assert_eq!(left, right);
+        }
+
+        #[test]
+        fn next_char() {
+            let s = Span {
+                start: Position {
+                    line: 1,
+                    col: 41,
+                    offset: 50,
+                },
+                end: Position {
+                    line: 1,
+                    col: 50,
+                    offset: 59,
+                },
+            };
+
+            let left = s.next_char();
+
+            let right = Span {
+                start: Position {
+                    line: 1,
+                    col: 50,
+                    offset: 59,
+                },
+                end: Position {
+                    line: 1,
+                    col: 51,
+                    offset: 60,
+                },
+            };
 
             assert_eq!(left, right);
         }
