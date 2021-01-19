@@ -9,3 +9,5 @@ edition = "2018"
 [dependencies]
 lisbeth-tuple-tools = { path = "../lisbeth-tuple-tools" }
 lisbeth-error = { path = "../lisbeth-error" }
+
+paste = "1.0"
