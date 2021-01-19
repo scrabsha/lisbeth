@@ -65,6 +65,10 @@ pub trait Terminal: Sized {
     fn specific_description(&self) -> String;
 }
 
+fn incorrect_terminal_error(span: Span, expected: &str, got: String) -> AnnotatedError {
+    AnnotatedError::new(span, format!("Expected {}, found {}", expected, got))
+}
+
 // Allows Token -> Terminal conversion.
 //
 // This trait should be implemented by the token macro.
@@ -76,11 +80,8 @@ pub trait Tokenizeable<T: Token>: Sized + Terminal {
         match Self::from_token(tok) {
             Some(t) => Ok(t),
             None => {
-                let report = AnnotatedError::new(
-                    tok.span(),
-                    format!("Expected {}, found {}", Self::DESCRIPTION, tok.describe()),
-                );
-
+                let report =
+                    incorrect_terminal_error(tok.span(), Self::DESCRIPTION, tok.describe());
                 Err(report)
             }
         }
@@ -266,4 +267,3 @@ macro_rules! token {
         }
     };
 }
-
