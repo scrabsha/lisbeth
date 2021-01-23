@@ -192,22 +192,20 @@ pub trait Token: Sized {
 #[macro_export]
 macro_rules! token {
     (
-        $( #[doc = $doc: literal] )*
-        $( #[derive( $( $derive: tt ),* $(,)? )] )*
+        $( #[$m:meta] )*
         $token_name: ident =
             $( $term: ident )|* $(,)?
     ) => {
         ::paste::paste! {
             // Token type generation
-            $( #[doc = $doc] )*
-            $( #[derive($( $derive ),* )] )*
+            $( #[$m] )*
             struct $token_name {
                 kind: [<$token_name Kind>],
                 span: ::lisbeth_error::span::Span,
             }
 
             // Token kind type generation
-            $( #[derive($( $derive ),*)] )*
+            $( #[$m] )*
             enum [<$token_name Kind>] {
                 $( $term($term), )*
             }
