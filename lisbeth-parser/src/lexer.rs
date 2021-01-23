@@ -19,6 +19,8 @@
 //! allows the lexer to correctly handle it. It also holds the span at which the
 //! terminal was encountered.
 
+use std::convert::TryFrom;
+
 use lisbeth_error::{
     error::AnnotatedError,
     span::{Span, SpannedStr},
@@ -212,7 +214,7 @@ macro_rules! token {
 
             // Faillible Token -> Terminal conversion
             $(
-                impl ::lisbeth_parser::lexer::Tokenizeable<$token_name> for $term {
+                impl $crate::lexer::Tokenizeable<$token_name> for $term {
                     fn from_token(tok: &$token_name) -> Option<Self> {
                         match &tok.kind {
                             [<$token_name Kind>]::$term(t) => Some(t.clone()),
@@ -222,7 +224,7 @@ macro_rules! token {
                 }
              )*
 
-            impl ::lisbeth_parser::lexer::Token for $token_name {
+            impl $crate::lexer::Token for $token_name {
                 fn from_str(
                     input: ::lisbeth_error::span::SpannedStr,
                 ) -> Result<
@@ -266,4 +268,160 @@ macro_rules! token {
             }
         }
     };
+}
+
+/// Represents a sequence of tokens.
+///
+/// This structure is created thanks to a [SpannedStr].
+#[derive(Clone, Debug, PartialEq)]
+pub struct Lexer<Tok>(Vec<Tok>);
+
+impl<Tok: Token> Lexer<Tok> {
+    fn from_spanned_str(mut input: SpannedStr) -> Result<Lexer<Tok>, Vec<AnnotatedError>> {
+        let mut toks = Vec::<Tok>::new();
+        let mut errs = Vec::<AnnotatedError>::new();
+
+        while !input.content().is_empty() {
+            match Tok::from_str(input) {
+                Ok((tok, tail)) => {
+                    // Everything went correctly
+                    toks.push(tok);
+                    input = tail;
+                }
+                Err((es, Some(tail))) => {
+                    // Some errors, but we still know where to resume
+                    errs.extend(es);
+                    input = tail;
+                }
+                Err((es, None)) => {
+                    // Some errors, but we don't know where to resume
+                    errs.extend(es);
+                    return Err(errs);
+                }
+            }
+        }
+
+        if errs.is_empty() {
+            Ok(Lexer(toks))
+        } else {
+            Err(errs)
+        }
+    }
+}
+
+impl<'a, Tok> TryFrom<SpannedStr<'a>> for Lexer<Tok>
+where
+    Tok: Token + 'a,
+{
+    type Error = Vec<AnnotatedError>;
+
+    fn try_from(input: SpannedStr) -> Result<Self, Self::Error> {
+        Self::from_spanned_str(input)
+    }
+}
+
+#[cfg(test)]
+mod lexer {
+    use super::*;
+
+    mod from_spanned_str {
+        use super::*;
+
+        #[derive(Clone, Debug, PartialEq)]
+        struct Dash;
+        #[derive(Clone, Debug, PartialEq)]
+        struct Dot;
+
+        impl Terminal for Dash {
+            fn lex(i: SpannedStr) -> Option<LexingResult<Self>> {
+                if i.content().starts_with('-') {
+                    let (matched, tail) = i.split_at(1);
+                    let d = Dash;
+                    let s = matched.span();
+                    return Some(Ok((d, s, tail)));
+                }
+
+                if i.content().starts_with('_') {
+                    let (matched, tail) = i.split_at(1);
+                    let report = AnnotatedError::new(matched.span(), "Expected `-`, found `_`");
+                    return Some(Err((vec![report], Some(tail))));
+                }
+
+                return None;
+            }
+
+            fn specific_description(&self) -> String {
+                "`-`".to_string()
+            }
+
+            const DESCRIPTION: &'static str = "`-`";
+        }
+
+        impl Terminal for Dot {
+            fn lex(i: SpannedStr) -> Option<LexingResult<Self>> {
+                if i.content().starts_with('.') {
+                    let (matched, tail) = i.split_at(1);
+                    let d = Dot;
+                    let s = matched.span();
+                    return Some(Ok((d, s, tail)));
+                }
+
+                return None;
+            }
+
+            fn specific_description(&self) -> String {
+                "`.`".to_string()
+            }
+
+            const DESCRIPTION: &'static str = "`.`";
+        }
+
+        token! {
+            #[derive(Debug, PartialEq)]
+            MorseToken = Dash | Dot
+        }
+
+        #[test]
+        fn working_case() {
+            let input = SpannedStr::input_file("...---...");
+            let l = Lexer::<MorseToken>::from_spanned_str(input);
+
+            assert!(l.is_ok());
+
+            let left_parsed_tokens = l.unwrap().0.into_iter().map(|t| t.kind).collect::<Vec<_>>();
+
+            let right_parsed_tokens = vec![
+                MorseTokenKind::Dot(Dot),
+                MorseTokenKind::Dot(Dot),
+                MorseTokenKind::Dot(Dot),
+                MorseTokenKind::Dash(Dash),
+                MorseTokenKind::Dash(Dash),
+                MorseTokenKind::Dash(Dash),
+                MorseTokenKind::Dot(Dot),
+                MorseTokenKind::Dot(Dot),
+                MorseTokenKind::Dot(Dot),
+            ];
+
+            assert_eq!(left_parsed_tokens, right_parsed_tokens);
+        }
+
+        #[test]
+        fn error_with_recovery() {
+            let input = SpannedStr::input_file("__");
+            let l = Lexer::<MorseToken>::from_spanned_str(input);
+
+            // We ensure that the recovery actually happened because there
+            // are two errors.
+            assert_eq!(l.unwrap_err().len(), 2);
+        }
+
+        #[test]
+        fn fatal_error() {
+            let input = SpannedStr::input_file("||");
+            let l = Lexer::<MorseToken>::from_spanned_str(input);
+
+            // | can not be recovered from, so there should be a single error
+            assert_eq!(l.unwrap_err().len(), 1);
+        }
+    }
 }
