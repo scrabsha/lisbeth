@@ -40,6 +40,8 @@
 //! assert_eq!(t, (1, 0, "foo"));
 //! ```
 
+#![deny(warnings)]
+
 mod append;
 mod map;
 
