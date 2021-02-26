@@ -20,7 +20,7 @@
 //! [`AnnotatedError`]: error::AnnotatedError
 //! [`FormattedError`]: reporter::FormattedError
 
-#![forbid(missing_docs, warnings)]
+#![deny(missing_docs, warnings)]
 
 pub mod error;
 pub mod handbook;
